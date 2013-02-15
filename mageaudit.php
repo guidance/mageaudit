@@ -37,7 +37,10 @@ function getRewrites($classType, $sorted = true)
         if (isset($config['rewrite'])) {
             foreach ($config['rewrite'] as $alias => $class) {
                 $classAlias = $package . '/' . $alias;
-                $rewrites[$classAlias] = $class;
+                $rewrites[$classAlias] = array(
+                    'alias' => $classAlias,
+                    'class' => $class
+                );
             }
         }
     }
@@ -69,23 +72,31 @@ function getModules($sorted = true)
 
 $codePools = getModules();
 
-
+// Get all system rewrites
 $rewriteTypes = array('blocks', 'helpers', 'models');
 $systemRewrites = array();
 foreach ($rewriteTypes as $rewriteType) {
     $systemRewrites[$rewriteType] = getRewrites($rewriteType);
 }
 
+// Sort rewrites by module
+$moduleRewrites = array();
+foreach ($rewriteTypes as $rewriteType) {
+    foreach ($systemRewrites[$rewriteType] as $rewrite) {
+        $module = explode('_', $rewrite['class']);
+        $module = $module[0] . '_' . $module[1];
+        $moduleRewrites[$rewriteType][$module][] = $rewrite;
+    }
+}
+
+
 ?>
 <html>
 <head>
-    <title><?php echo $_SERVER['HTTP_HOST'];?> - Magento Audit Report</title>
+    <title>Magento Audit Report - <?php echo $_SERVER['HTTP_HOST'];?></title>
     <style type="text/css">
         body {
             font-family: sans-serif;
-        }
-        ul {
-            padding-left: 0;
         }
         label, input {
             display: block;
@@ -140,6 +151,11 @@ foreach ($rewriteTypes as $rewriteType) {
         table.rewrites p {
             font-weight: bold;
         }
+        .module {
+            border: 1px solid #e8e8e8;
+            padding: 0.5em;
+            margin-bottom: 1em;
+        }
     </style>
 </head>
 <body>
@@ -171,54 +187,28 @@ foreach ($rewriteTypes as $rewriteType) {
 <h2>Installed modules:</h2>
 
 <?php foreach ($codePools as $codePoolType => $modules): ?>
-
-<?php if ($codePoolType == 'core') continue; ?>
-
-<h3><?php echo ucwords($codePoolType); ?> code pool</h3>
-
+    <?php if ($codePoolType == 'core') continue; ?>
+    <h3><?php echo ucwords($codePoolType); ?> code pool</h3>
     <?php if (count($modules)): ?>
-        <table class="modules">
-            <col width="25%" />
-            <col width="75%" />
-            <tr>
-                <th>Module Name</th>
-                <th>Purpose</th>
-            </tr>
         <?php foreach ($modules as $moduleName): ?>
-            <tr>
-                <td><?php echo $moduleName; ?></td>
-                <td>&nbsp;</td>
-            </tr>
+        <div class="module">
+            <h4><?php echo $moduleName; ?></h4>
+            <p class="purpose">Purpose of module:</p>
+            <?php foreach ($moduleRewrites as $rewriteType => $rewrites): ?>
+                <?php if (count($rewrites[$moduleName])): ?>
+                    <p class="rewrite">Rewritten <?php echo ucwords($rewriteType); ?>:</p>
+                    <ul>
+                    <?php foreach ($rewrites[$moduleName] as $rewrite): ?>
+                        <li><?php echo $rewrite['alias']; ?> =&gt; <?php echo $rewrite['class']; ?></li>
+                    <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </div>
         <?php endforeach; ?>
-        </table>
     <?php else: ?>
         <p>No modules found</p>
     <?php endif; ?>
-
 <?php endforeach; ?>
-
-<h2>Class rewrites:</h2>
-
-<?php foreach ($systemRewrites as $rewriteType => $rewrites): ?>
-
-<h3><?php echo ucwords($rewriteType); ?></h3>
-
-    <?php if (count($rewrites)): ?>
-        <?php foreach ($rewrites as $alias => $class): ?>
-            <table class="rewrites">
-                <tr>
-                    <td>
-                        <p><?php echo $alias; ?> =&gt; <?php echo $class; ?></p>
-                        <p>Purpose:</p>
-                    </td>
-                </tr>
-            </table>
-        <?php endforeach; ?>
-    <?php else: ?>
-        <p>No rewrites found</p>
-    <?php endif; ?>
-
-<?php endforeach; ?>
-
 </body>
 </html>
