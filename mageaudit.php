@@ -2,7 +2,7 @@
 /**
 * NOTICE OF LICENSE
 *
-* Copyright 2012 Guidance Solutions
+* Copyright 2013 Guidance Solutions
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@
 
 * @author Gordon Knoppe
 * @category Guidance
-* @package Magecheck
-* @copyright Copyright (c) 2012 Guidance Solutions (http://www.guidance.com)
+* @package Mageaudit
+* @copyright Copyright (c) 2013 Guidance Solutions (http://www.guidance.com)
 * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
 */
 
@@ -97,30 +97,6 @@ foreach ($rewriteTypes as $rewriteType) {
     <style type="text/css">
         body {
             font-family: sans-serif;
-        }
-        label, input {
-            display: block;
-            margin-bottom: 5px;
-        }
-        .alert {
-            background-color: #FCF8E3;
-            border: 1px solid #FBEED5;
-            border-radius: 4px 4px 4px 4px;
-            color: #C09853;
-            margin-bottom: 20px;
-            padding: 8px 35px 8px 14px;
-            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-            list-style: none;
-        }
-        .alert-success {
-            background-color: #DFF0D8;
-            border-color: #D6E9C6;
-            color: #468847;
-        }
-        .alert-error {
-            background-color: #F2DEDE;
-            border-color: #EED3D7;
-            color: #B94A48;
         }
         th, td {
             border: 1px solid #e8e8e8;
