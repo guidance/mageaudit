@@ -50,6 +50,19 @@ function getRewrites($classType, $sorted = true)
     return $rewrites;
 }
 
+function getOverridenMethods($className)
+{
+    $overridenMethods = array();
+    $class = new ReflectionClass($className);
+    foreach ($class->getMethods() as $method) {
+        if ($method->getDeclaringClass()->getName() == $className) {
+            $overridenMethods[] = $method->getName();
+        }
+    }
+    sort($overridenMethods);
+    return $overridenMethods;
+}
+
 function getModules($sorted = true)
 {
     $config = Mage::getConfig();
@@ -136,6 +149,10 @@ foreach ($rewriteTypes as $rewriteType) {
 </head>
 <body>
 <h1>Magento Module Audit Report</h1>
+<h2>Configuration:</h2>
+<ul>
+    <li><a href="?methods=true">Include overridden methods.</a></li>
+</ul>
 <h2>Summary:</h2>
 <table class="summary">
     <tr>
@@ -175,7 +192,17 @@ foreach ($rewriteTypes as $rewriteType) {
                     <p class="rewrite">Rewritten <?php echo ucwords($rewriteType); ?>:</p>
                     <ul>
                     <?php foreach ($rewrites[$moduleName] as $rewrite): ?>
-                        <li><?php echo $rewrite['alias']; ?> =&gt; <?php echo $rewrite['class']; ?></li>
+                        <li>
+                            <?php echo $rewrite['alias']; ?> =&gt; <?php echo $rewrite['class']; ?>
+                            <?php $methods = getOverridenMethods($rewrite['class']); ?>
+                            <?php if (count($methods) && isset($_GET['methods'])): ?>
+                            <ul>
+                                <?php foreach ($methods as $method): ?>
+                                <li><?php echo $method; ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php endif; ?>
+                        </li>
                     <?php endforeach; ?>
                     </ul>
                 <?php endif; ?>
