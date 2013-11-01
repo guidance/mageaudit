@@ -149,6 +149,40 @@ foreach ($rewriteTypes as $rewriteType) {
 </head>
 <body>
 <h1>Magento Module Audit Report</h1>
+<h2>Statistics</h2>
+<?php 
+$counts = array(
+    'Products' => 'catalog/product',
+    'Content pages' => 'cms/page',
+    'Content blocks' => 'cms/block',
+    'Newsletter subscribers' => 'newsletter/subscriber',
+    'Customers' => 'customer/customer',
+    'Customer groups' => 'customer/group',
+    'Sales rules' => 'salesrule/rule',
+    'Sales rule coupons' => 'salesrule/coupon',
+    'Quotes' => 'sales/quote',
+    'Orders' => 'sales/order',
+    'Invoices' => 'sales/order_invoice',
+    'Shipments' => 'sales/order_shipment',
+);
+?>
+<table class="summary">
+    <?php foreach ($counts as $title => $alias): ?>
+    <tr>
+        <th><?php echo $title; ?></th>
+        <td><?php echo number_format(Mage::getModel($alias)->getCollection()->getSize()); ?></td>
+    </tr>
+    <?php endforeach; ?>
+</table>
+<h3>Product Breakdown</h3>
+<table class="summary">
+    <?php foreach (Mage::getModel('catalog/product_type')->getTypes() as $type_id => $type_data): ?>
+    <tr>
+        <th><?php echo $type_data['label']; ?></th>
+        <td><?php echo number_format(Mage::getModel('catalog/product')->getCollection()->addAttributeToFilter('type_id', $type_id)->getSize()); ?></td>
+    </tr>
+    <?php endforeach; ?>
+</table>
 <h2>Configuration:</h2>
 <ul>
     <li><a href="?methods=true">Include overridden methods.</a></li>
