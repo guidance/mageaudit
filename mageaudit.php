@@ -183,6 +183,17 @@ $counts = array(
     </tr>
     <?php endforeach; ?>
 </table>
+<h3>Order Statuses</h3>
+<?php $allOrderStatuses = Mage::getModel('sales/order_status')->getCollection(); ?>
+<?php if($allOrderStatuses->count()): ?>
+<table class="summary">
+    <?php foreach ($allOrderStatuses as $orderStatus): ?>
+        <tr>
+            <th><?php echo $orderStatus->getLabel(); ?></th>
+        </tr>
+    <?php endforeach; ?>
+</table>
+<?php endif ?>
 <h2>Configuration:</h2>
 <ul>
     <li><a href="?methods=true">Include overridden methods.</a></li>
