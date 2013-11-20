@@ -53,13 +53,19 @@ function getRewrites($classType, $sorted = true)
 function getOverridenMethods($className)
 {
     $overridenMethods = array();
-    $class = new ReflectionClass($className);
-    foreach ($class->getMethods() as $method) {
-        if ($method->getDeclaringClass()->getName() == $className) {
-            $overridenMethods[] = $method->getName();
+
+    if (class_exists($className)) {
+        $class = new ReflectionClass($className);
+        foreach ($class->getMethods() as $method) {
+            if ($method->getDeclaringClass()->getName() == $className) {
+                $overridenMethods[] = $method->getName();
+            }
         }
+        sort($overridenMethods);
+    } else {
+        $overridenMethods[] = "The class called " . $className . " does not exist.";
     }
-    sort($overridenMethods);
+
     return $overridenMethods;
 }
 
