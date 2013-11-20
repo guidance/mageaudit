@@ -83,6 +83,33 @@ function getModules($sorted = true)
     return $codePools;
 }
 
+function getAllObservers()
+{
+    $config = Mage::getConfig();
+    $configNodes = array('global/events','frontend/events');
+    $observers = array();
+    foreach($configNodes as $configNode) {
+        $eventConfig = $config->getNode($configNode);
+
+        foreach ($eventConfig->children() as $obsConfig) {
+            foreach($obsConfig->observers->children() as $observerName => $observerConfig) {
+                $classNameCheck = "-" . $observerConfig->getClassName() . "-";
+                $isMageEvent = strpos($classNameCheck, 'Mage_');
+                $isEnterpriseEvent = strpos($classNameCheck, 'Enterprise_');
+                if(!$isMageEvent  && !$isEnterpriseEvent) {
+                    $observers[$observerName] = array(
+                        'type'  => (string)$obsConfig->type,
+                        'model' => $observerConfig->getClassName(),
+                        'method'=> (string)$observerConfig->method,
+                        'args'  => (array)$observerConfig->args,
+                    );
+                }
+            }
+        }
+    }
+    return $observers;
+}
+
 $codePools = getModules();
 
 // Get all system rewrites
@@ -121,6 +148,9 @@ foreach ($rewriteTypes as $rewriteType) {
         table.summary td {
             height: 40px;
             text-align: right;
+        }
+        table.summary td.observer {
+            text-align: left;
         }
         table.summary th {
             text-align: left;
@@ -183,6 +213,18 @@ $counts = array(
     </tr>
     <?php endforeach; ?>
 </table>
+<?php $listobservers = getAllObservers(); ?>
+<?php if(count($listobservers)): ?>
+<h3>Observers</h3>
+<table class="summary">
+    <?php foreach ($listobservers as $observerName => $observerInfo): ?>
+        <tr>
+            <th><?php echo $observerName ?></th>
+            <td class="observer"><?php echo $observerInfo['model'] ?>::<?php echo $observerInfo['method'] ?></td>
+        </tr>
+    <?php endforeach; ?>
+</table>
+<?php endif ?>
 <h2>Configuration:</h2>
 <ul>
     <li><a href="?methods=true">Include overridden methods.</a></li>
