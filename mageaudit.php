@@ -30,19 +30,42 @@ Mage::app('admin', 'store');
 function getRewrites($classType, $sorted = true)
 {
     $config = Mage::getConfig();
-    $configNode = 'global/' . $classType;
-    $models = $config->getNode($configNode)->asArray();
     $rewrites = array();
-    foreach ($models as $package => $config) {
-        if (isset($config['rewrite'])) {
-            foreach ($config['rewrite'] as $alias => $class) {
-                $classAlias = $package . '/' . $alias;
-                $rewrites[$classAlias] = array(
-                    'alias' => $classAlias,
-                    'class' => $class
-                );
+    switch ($classType) {
+        case 'controllers':
+            foreach (array('admin', 'frontend') as $type) {
+                $controllers = $config->getNode($type . '/routers')->asArray();
+                foreach ($controllers as $router => $args) {
+                    foreach ($args['args']['modules'] as $modules) {
+                        if (
+                            !isset($modules['@'])
+                            || !isset($modules['@']['before'])
+                            || strpos($modules[0], 'Mage_') === 0
+                        ) {
+                            continue;
+                        }
+                        $rewrites[$modules[0]] = array(
+                            'alias' => $modules['@']['before'],
+                            'class' => $modules[0]
+                        );
+                    }
+                }
             }
-        }
+            break;
+        default:
+            $configNode = 'global/' . $classType;
+            $models = $config->getNode($configNode)->asArray();
+            foreach ($models as $package => $config) {
+                if (isset($config['rewrite'])) {
+                    foreach ($config['rewrite'] as $alias => $class) {
+                        $classAlias = $package . '/' . $alias;
+                        $rewrites[$classAlias] = array(
+                            'alias' => $classAlias,
+                            'class' => $class
+                        );
+                    }
+                }
+            }
     }
     if ($sorted) {
         ksort($rewrites);
@@ -53,7 +76,11 @@ function getRewrites($classType, $sorted = true)
 function getOverridenMethods($className)
 {
     $overridenMethods = array();
-    $class = new ReflectionClass($className);
+    try {
+        $class = new ReflectionClass($className);
+    } catch (Exception $e) {
+        return $overridenMethods;
+    }
     foreach ($class->getMethods() as $method) {
         if ($method->getDeclaringClass()->getName() == $className) {
             $overridenMethods[] = $method->getName();
@@ -86,7 +113,7 @@ function getModules($sorted = true)
 $codePools = getModules();
 
 // Get all system rewrites
-$rewriteTypes = array('blocks', 'helpers', 'models');
+$rewriteTypes = array('blocks', 'controllers', 'helpers', 'models');
 $systemRewrites = array();
 foreach ($rewriteTypes as $rewriteType) {
     $systemRewrites[$rewriteType] = getRewrites($rewriteType);
@@ -200,6 +227,10 @@ $counts = array(
     <tr>
         <th>Block rewrites</th>
         <td><?php echo count($systemRewrites['blocks']); ?></td>
+    </tr>
+    <tr>
+        <th>Controller rewrites</th>
+        <td><?php echo count($systemRewrites['controllers']); ?></td>
     </tr>
     <tr>
         <th>Helper rewrites</th>
