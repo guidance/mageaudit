@@ -41,13 +41,46 @@ function getRewrites($classType, $sorted = true)
                             !isset($modules['@'])
                             || !isset($modules['@']['before'])
                             || strpos($modules[0], 'Mage_') === 0
+                            || strpos($modules[0], 'Enterprise_') === 0
                         ) {
                             continue;
                         }
-                        $rewrites[$modules[0]] = array(
-                            'alias' => $modules['@']['before'],
-                            'class' => $modules[0]
+                        $moduleName = implode(
+                            '_',
+                            array_slice(
+                                explode(
+                                    '_',
+                                    $modules[0]
+                                ), 0, 2
+                            )
                         );
+                        $files = getControllerFiles(
+                            Mage::getModuleDir('controllers', $moduleName)
+                        );
+                        foreach ($files as $file) {
+                            preg_match_all(
+                                '/class\s([a-z_]+)\sextends\s([a-z_]+)/i',
+                                file_get_contents($file),
+                                $matches,
+                                PREG_PATTERN_ORDER
+                            );
+                            $class   = trim($matches[1][0]);
+                            $extends = trim($matches[2][0]);
+                            if (strpos(
+                                $extends,
+                                $modules['@']['before']
+                            ) !== false) {
+                                $rewrites[$class] = array(
+                                    'alias' => $extends,
+                                    'class' => $class
+                                );
+                                // controller classes don't autoload so include
+                                // them manually
+                                if (isset($_GET['methods'])) {
+                                    include_once $file;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -73,14 +106,31 @@ function getRewrites($classType, $sorted = true)
     return $rewrites;
 }
 
+function getControllerFiles($dir, $files = array())
+{
+    $contents = scandir($dir);
+    foreach ($contents as $file) {
+        if (in_array($file, array('.', '..'))) {
+            continue;
+        }
+        $file = $dir . '/' . $file;
+        if (substr($file, -14) == 'Controller.php') {
+            $files[] = $file;
+        } else if (is_dir($file)) {
+            $files += getControllerFiles($file, $files);
+        }
+    }
+    return $files;
+}
+
 function getOverridenMethods($className)
 {
     $overridenMethods = array();
-    try {
+    //try {
         $class = new ReflectionClass($className);
-    } catch (Exception $e) {
-        return $overridenMethods;
-    }
+    //} catch (Exception $e) {
+    //    return $overridenMethods;
+    //}
     foreach ($class->getMethods() as $method) {
         if ($method->getDeclaringClass()->getName() == $className) {
             $overridenMethods[] = $method->getName();
@@ -259,13 +309,15 @@ $counts = array(
                     <?php foreach ($rewrites[$moduleName] as $rewrite): ?>
                         <li>
                             <?php echo $rewrite['alias']; ?> =&gt; <?php echo $rewrite['class']; ?>
-                            <?php $methods = getOverridenMethods($rewrite['class']); ?>
-                            <?php if (count($methods) && isset($_GET['methods'])): ?>
-                            <ul>
-                                <?php foreach ($methods as $method): ?>
-                                <li><?php echo $method; ?></li>
-                                <?php endforeach; ?>
-                            </ul>
+                            <?php if (isset($_GET['methods'])): ?>
+                                <?php $methods = getOverridenMethods($rewrite['class']); ?>
+                                <?php if (count($methods)): ?>
+                                <ul>
+                                    <?php foreach ($methods as $method): ?>
+                                    <li><?php echo $method; ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </li>
                     <?php endforeach; ?>
@@ -280,3 +332,4 @@ $counts = array(
 <?php endforeach; ?>
 </body>
 </html>
+
