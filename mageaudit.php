@@ -126,11 +126,7 @@ function getControllerFiles($dir, $files = array())
 function getOverridenMethods($className)
 {
     $overridenMethods = array();
-    //try {
-        $class = new ReflectionClass($className);
-    //} catch (Exception $e) {
-    //    return $overridenMethods;
-    //}
+    $class = new ReflectionClass($className);
     foreach ($class->getMethods() as $method) {
         if ($method->getDeclaringClass()->getName() == $className) {
             $overridenMethods[] = $method->getName();
