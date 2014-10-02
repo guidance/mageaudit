@@ -30,24 +30,97 @@ Mage::app('admin', 'store');
 function getRewrites($classType, $sorted = true)
 {
     $config = Mage::getConfig();
-    $configNode = 'global/' . $classType;
-    $models = $config->getNode($configNode)->asArray();
     $rewrites = array();
-    foreach ($models as $package => $config) {
-        if (isset($config['rewrite'])) {
-            foreach ($config['rewrite'] as $alias => $class) {
-                $classAlias = $package . '/' . $alias;
-                $rewrites[$classAlias] = array(
-                    'alias' => $classAlias,
-                    'class' => $class
-                );
+    switch ($classType) {
+        case 'controllers':
+            foreach (array('admin', 'frontend') as $type) {
+                $controllers = $config->getNode($type . '/routers')->asArray();
+                foreach ($controllers as $router => $args) {
+                    foreach ($args['args']['modules'] as $modules) {
+                        if (
+                            !isset($modules['@'])
+                            || !isset($modules['@']['before'])
+                            || strpos($modules[0], 'Mage_') === 0
+                            || strpos($modules[0], 'Enterprise_') === 0
+                        ) {
+                            continue;
+                        }
+                        $moduleName = implode(
+                            '_',
+                            array_slice(
+                                explode(
+                                    '_',
+                                    $modules[0]
+                                ), 0, 2
+                            )
+                        );
+                        $files = getControllerFiles(
+                            Mage::getModuleDir('controllers', $moduleName)
+                        );
+                        foreach ($files as $file) {
+                            preg_match_all(
+                                '/class\s([a-z_]+)\sextends\s([a-z_]+)/i',
+                                file_get_contents($file),
+                                $matches,
+                                PREG_PATTERN_ORDER
+                            );
+                            $class   = trim($matches[1][0]);
+                            $extends = trim($matches[2][0]);
+                            if (strpos(
+                                $extends,
+                                $modules['@']['before']
+                            ) !== false) {
+                                $rewrites[$class] = array(
+                                    'alias' => $extends,
+                                    'class' => $class
+                                );
+                                // controller classes don't autoload so include
+                                // them manually
+                                if (isset($_GET['methods'])) {
+                                    include_once $file;
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        }
+            break;
+        default:
+            $configNode = 'global/' . $classType;
+            $models = $config->getNode($configNode)->asArray();
+            foreach ($models as $package => $config) {
+                if (isset($config['rewrite'])) {
+                    foreach ($config['rewrite'] as $alias => $class) {
+                        $classAlias = $package . '/' . $alias;
+                        $rewrites[$classAlias] = array(
+                            'alias' => $classAlias,
+                            'class' => $class
+                        );
+                    }
+                }
+            }
     }
     if ($sorted) {
         ksort($rewrites);
     }
     return $rewrites;
+}
+
+function getControllerFiles($dir, $files = array())
+{
+    $contents = scandir($dir);
+    foreach ($contents as $file) {
+        if (in_array($file, array('.', '..'))) {
+            continue;
+        }
+        $file = $dir . '/' . $file;
+        if (substr($file, -14) == 'Controller.php') {
+            $files[] = $file;
+        } else if (is_dir($file)) {
+            $files += getControllerFiles($file, $files);
+        }
+    }
+    return $files;
 }
 
 function getOverridenMethods($className)
@@ -86,7 +159,7 @@ function getModules($sorted = true)
 $codePools = getModules();
 
 // Get all system rewrites
-$rewriteTypes = array('blocks', 'helpers', 'models');
+$rewriteTypes = array('blocks', 'controllers', 'helpers', 'models');
 $systemRewrites = array();
 foreach ($rewriteTypes as $rewriteType) {
     $systemRewrites[$rewriteType] = getRewrites($rewriteType);
@@ -202,6 +275,10 @@ $counts = array(
         <td><?php echo count($systemRewrites['blocks']); ?></td>
     </tr>
     <tr>
+        <th>Controller rewrites</th>
+        <td><?php echo count($systemRewrites['controllers']); ?></td>
+    </tr>
+    <tr>
         <th>Helper rewrites</th>
         <td><?php echo count($systemRewrites['helpers']); ?></td>
     </tr>
@@ -228,13 +305,15 @@ $counts = array(
                     <?php foreach ($rewrites[$moduleName] as $rewrite): ?>
                         <li>
                             <?php echo $rewrite['alias']; ?> =&gt; <?php echo $rewrite['class']; ?>
-                            <?php $methods = getOverridenMethods($rewrite['class']); ?>
-                            <?php if (count($methods) && isset($_GET['methods'])): ?>
-                            <ul>
-                                <?php foreach ($methods as $method): ?>
-                                <li><?php echo $method; ?></li>
-                                <?php endforeach; ?>
-                            </ul>
+                            <?php if (isset($_GET['methods'])): ?>
+                                <?php $methods = getOverridenMethods($rewrite['class']); ?>
+                                <?php if (count($methods)): ?>
+                                <ul>
+                                    <?php foreach ($methods as $method): ?>
+                                    <li><?php echo $method; ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </li>
                     <?php endforeach; ?>
@@ -249,3 +328,4 @@ $counts = array(
 <?php endforeach; ?>
 </body>
 </html>
+
