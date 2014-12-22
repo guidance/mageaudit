@@ -297,7 +297,6 @@ $counts = array(
         <?php foreach ($modules as $moduleName): ?>
         <div class="module">
             <h4><?php echo $moduleName; ?></h4>
-            <p class="purpose">Purpose of module:</p>
             <?php foreach ($moduleRewrites as $rewriteType => $rewrites): ?>
                 <?php if (count($rewrites[$moduleName])): ?>
                     <p class="rewrite">Rewritten <?php echo ucwords($rewriteType); ?>:</p>
