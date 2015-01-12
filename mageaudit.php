@@ -141,22 +141,36 @@ function getModules($sorted = true)
     $config = Mage::getConfig();
     $configNode = 'modules';
     $modules = $config->getNode($configNode)->asArray();
-    $codePools = array();
+    $codePools = $dependancies = array();
     foreach ($modules as $package => $config) {
         if (isset($config['codePool'])) {
             $codePool = $config['codePool'];
-            $codePools[$codePool][] = $package;
+            $codePools[$codePool][] = array_merge(
+                $config,
+                array('name' => $package)
+            );
+            foreach ($config['depends'] as $name => $value) {
+                if (!isset($dependancies[$name])) {
+                    $dependancies[$name] = array();
+                }
+                $dependancies[$name][] = $package;
+            }
         }
     }
     if ($sorted) {
         foreach (array_keys($codePools) as $codePool) {
-            sort($codePools[$codePool]);
+            usort($codePools[$codePool], 'sortModules');
         }
     }
-    return $codePools;
+    return array($codePools, $dependancies);
 }
 
-$codePools = getModules();
+function sortModules($a, $b)
+{
+    return strcmp($a['name'], $b['name']);
+}
+
+list($codePools, $dependancies) = getModules();
 
 // Get all system rewrites
 $rewriteTypes = array('blocks', 'controllers', 'helpers', 'models');
@@ -294,9 +308,26 @@ $counts = array(
     <?php if ($codePoolType == 'core') continue; ?>
     <h3><?php echo ucwords($codePoolType); ?> code pool</h3>
     <?php if (count($modules)): ?>
-        <?php foreach ($modules as $moduleName): ?>
+        <?php foreach ($modules as $module): ?>
+        <?php $moduleName = $module['name'] ?>
         <div class="module">
             <h4><?php echo $moduleName; ?></h4>
+            <?php if (!empty($module['depends'])): ?>
+            <p>Requires:</p>
+            <ul>
+                <?php foreach ($module['depends'] as $name => $value): ?>
+                <li><?php echo $name ?></li>
+                <?php endforeach ?>
+            </ul>
+            <?php endif ?>
+            <?php if (isset($dependancies[$moduleName])): ?>
+            <p>Required by:</p>
+            <ul>
+                <?php foreach ($dependancies[$moduleName] as $name): ?>
+                <li><?php echo $name ?></li>
+                <?php endforeach ?>
+            </ul>
+            <?php endif ?>
             <?php foreach ($moduleRewrites as $rewriteType => $rewrites): ?>
                 <?php if (count($rewrites[$moduleName])): ?>
                     <p class="rewrite">Rewritten <?php echo ucwords($rewriteType); ?>:</p>
