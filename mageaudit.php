@@ -127,8 +127,18 @@ function getOverridenMethods($className)
 {
     $overridenMethods = array();
     $class = new ReflectionClass($className);
+    $parentMethods = array();
+    $parent = $class->getParentClass();
+    if ($parent) {
+        foreach ($parent->getMethods() as $method) {
+            $parentMethods[] = $method->getName();
+        }
+    }
     foreach ($class->getMethods() as $method) {
-        if ($method->getDeclaringClass()->getName() == $className) {
+        if (
+            $method->getDeclaringClass()->getName() == $className
+            && in_array($method->getName(), $parentMethods)
+        ) {
             $overridenMethods[] = $method->getName();
         }
     }
