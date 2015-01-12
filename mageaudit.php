@@ -23,8 +23,6 @@
 * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
 */
 
-ini_set('display_errors', 1);
-
 // Initialize Magento
 require 'app/Mage.php';
 Mage::app('admin', 'store');
@@ -127,24 +125,29 @@ function getControllerFiles($dir, $files = array())
 
 function getOverridenMethods($className)
 {
-    $overridenMethods = array();
-    $class = new ReflectionClass($className);
-    $parentMethods = array();
-    $parent = $class->getParentClass();
-    if ($parent) {
-        foreach ($parent->getMethods() as $method) {
-            $parentMethods[] = $method->getName();
+    if (class_exists($className)) {
+        $overridenMethods = array();
+        $class = new ReflectionClass($className);
+        $parentMethods = array();
+        $parent = $class->getParentClass();
+        if ($parent) {
+            foreach ($parent->getMethods() as $method) {
+                $parentMethods[] = $method->getName();
+            }
         }
-    }
-    foreach ($class->getMethods() as $method) {
-        if (
-            $method->getDeclaringClass()->getName() == $className
-            && in_array($method->getName(), $parentMethods)
-        ) {
-            $overridenMethods[] = $method->getName();
+        foreach ($class->getMethods() as $method) {
+            if (
+                $method->getDeclaringClass()->getName() == $className
+                && in_array($method->getName(), $parentMethods)
+            ) {
+                $overridenMethods[] = $method->getName();
+            }
         }
+        sort($overridenMethods);
+    } else {
+        $overridenMethods[] = 'Class "' . $className . '" does not exist';
     }
-    sort($overridenMethods);
+
     return $overridenMethods;
 }
 
