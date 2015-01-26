@@ -208,6 +208,48 @@ function getAllObservers()
     return $observers;
 }
 
+function getStores()
+{
+    $data = array();
+    foreach (Mage::getModel('core/website')->getCollection() as $website) {
+        /** @var $website Mage_Core_Model_Website */
+        $groupCollection = $website->getGroupCollection();
+        $data[$website->getId()] = array(
+            'object' => $website,
+            'storeGroups' => array(),
+            'count' => 0
+        );
+        $defaultGroupId = $website->getDefaultGroupId();
+        foreach ($groupCollection as $storeGroup) {
+            /** @var $storeGroup Mage_Core_Model_Store_Group */
+            $storeCollection = $storeGroup->getStoreCollection();
+            $storeGroupCount = max(1, $storeCollection->count());
+            $data[$website->getId()]['storeGroups'][$storeGroup->getId()] = array(
+                'object' => $storeGroup,
+                'stores' => array(),
+                'count' => $storeGroupCount
+            );
+            $data[$website->getId()]['count'] += $storeGroupCount;
+            if ($storeGroup->getId() == $defaultGroupId) {
+                $storeGroup->setData('is_default', true);
+            }
+            $defaultStoreId = $storeGroup->getDefaultStoreId();
+            foreach ($storeCollection as $store) {
+                /** @var $store Mage_Core_Model_Store */
+                $data[$website->getId()]['storeGroups'][$storeGroup->getId()]['stores'][$store->getId()] = array(
+                    'object' => $store
+                );
+                if ($store->getId() == $defaultStoreId) {
+                    $store->setData('is_default', true);
+                }
+            }
+        }
+
+        $data[$website->getId()]['count'] = max(1, $data[$website->getId()]['count']);
+    }
+    return $data;
+}
+
 list($codePools, $dependancies) = getModules();
 
 // Get all system rewrites
@@ -247,11 +289,17 @@ foreach ($rewriteTypes as $rewriteType) {
             height: 40px;
             text-align: right;
         }
+        table.summary tbody td {
+            text-align: left;
+        }
         table.summary td.observer {
             text-align: left;
         }
         table.summary th {
             text-align: left;
+        }
+        table.summary thead th {
+            text-align: center;
         }
         table.modules {
             width: 100%;
@@ -273,11 +321,29 @@ foreach ($rewriteTypes as $rewriteType) {
             padding: 0.5em;
             margin-bottom: 1em;
         }
+        #nav {
+            position: fixed;
+            right: 20px;
+            top: 0;
+            border: 2px solid black;
+            padding: 20px;
+            list-style-type: none;
+        }
+        #nav li + li {
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
-<h1>Magento Module Audit Report</h1>
-<h2>Statistics</h2>
+<h1>Magento Audit</h1>
+<ul id="nav">
+    <li><a href="#stats">Statistics</a></li>
+    <li><a href="#stores">Stores</a></li>
+    <li><a href="#products">Products</a></li>
+    <li><a href="#observers">Observers</a></li>
+    <li><a href="#modules">Modules</a></li>
+</ul>
+<h2 id="stats">Statistics</h2>
 <?php 
 $counts = array(
     'Products' => 'catalog/product',
@@ -302,7 +368,74 @@ $counts = array(
     </tr>
     <?php endforeach; ?>
 </table>
-<h3>Product Breakdown</h3>
+<h2 id="stores">Stores</h2>
+<table class="summary">
+    <thead>
+        <tr>
+            <th>Website</th>
+            <th>Store Group</th>
+            <th>Store View</th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php $printedWebsite = false; ?>
+    <?php $printedStoreGroup = false; ?>
+    <?php foreach (getStores() as $webSiteId => $webSiteData): ?>
+
+        <?php if (count($webSiteData['storeGroups']) == 0): ?>
+
+            <tr>
+                <?php if (!$printedWebsite): ?>
+                    <td rowspan="<?php echo $webSiteData['count'] ?>"><?php echo $webSiteData['object']->getName() ?> (<?php echo $webSiteData['object']->getCode() ?>)</td>
+                <?php endif ?>
+
+                <td colspan="2">&nbsp;</td>
+            </tr>
+
+            <?php $printedWebsite = false; ?>
+            <?php continue ?>
+        <?php endif ?>
+
+        <?php foreach ($webSiteData['storeGroups'] as $storeGroupId => $storeGroupData): ?>
+            <?php if (count($storeGroupData['stores']) == 0): ?>
+                <tr>
+                    <?php if (!$printedWebsite): ?>
+                        <td rowspan="<?php echo $webSiteData['count'] ?>"><?php echo $webSiteData['object']->getName() ?> (<?php echo $webSiteData['object']->getCode() ?>)</td>
+                        <?php $printedWebsite = true; ?>
+                    <?php endif ?>
+
+                    <?php if (!$printedStoreGroup): ?>
+                    <td rowspan="<?php echo $storeGroupData['count'] ?>"><?php echo $storeGroupData['object']->getName() ?></td>
+                    <?php endif ?>
+
+                    <td>&nbsp;</td>
+                </tr>
+                <?php $printedStoreGroup = false; ?>
+                <?php continue ?>
+            <?php endif ?>
+
+            <?php foreach ($storeGroupData['stores'] as $storeId => $storeData): ?>
+                <tr>
+                    <?php if (!$printedWebsite): ?>
+                        <td rowspan="<?php echo $webSiteData['count'] ?>"><?php echo $webSiteData['object']->getName() ?> (<?php echo $webSiteData['object']->getCode() ?>)</td>
+                        <?php $printedWebsite = true; ?>
+                    <?php endif ?>
+
+                    <?php if (!$printedStoreGroup): ?>
+                    <td rowspan="<?php echo $storeGroupData['count'] ?>"><?php echo $storeGroupData['object']->getName() ?></td>
+                        <?php $printedStoreGroup = true; ?>
+                    <?php endif ?>
+
+                    <td><?php echo $storeData['object']->getName(); ?> (<?php echo $storeData['object']->getCode() ?>)</td>
+                </tr>
+            <?php endforeach; ?>
+            <?php $printedStoreGroup = false; ?>
+        <?php endforeach; ?>
+        <?php $printedWebsite = false; ?>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<h2 id="products">Products</h2>
 <table class="summary">
     <?php foreach (Mage::getModel('catalog/product_type')->getTypes() as $type_id => $type_data): ?>
     <tr>
@@ -313,7 +446,7 @@ $counts = array(
 </table>
 <?php $listobservers = getAllObservers() ?>
 <?php if(count($listobservers)): ?>
-<h3>Observers</h3>
+<h2 id="observers">Observers</h2>
 <table class="summary">
     <?php foreach ($listobservers as $name => $methods): ?>
         <tr>
@@ -327,11 +460,11 @@ $counts = array(
     <?php endforeach; ?>
 </table>
 <?php endif ?>
-<h2>Configuration:</h2>
+<h2 id="modules">Modules</h2>
 <ul>
     <li><a href="?methods=true">Include overridden methods.</a></li>
 </ul>
-<h2>Summary:</h2>
+<h3>Summary</h3>
 <table class="summary">
     <tr>
         <th>Community modules</th>
@@ -358,8 +491,6 @@ $counts = array(
         <td><?php echo count($systemRewrites['models']); ?></td>
     </tr>
 </table>
-
-<h2>Installed modules:</h2>
 
 <?php foreach ($codePools as $codePoolType => $modules): ?>
     <?php if ($codePoolType == 'core') continue; ?>
