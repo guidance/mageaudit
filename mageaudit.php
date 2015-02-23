@@ -328,6 +328,7 @@ foreach ($rewriteTypes as $rewriteType) {
             border: 2px solid black;
             padding: 20px;
             list-style-type: none;
+            background: white;
         }
         #nav li + li {
             margin-top: 5px;
