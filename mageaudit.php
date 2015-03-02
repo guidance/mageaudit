@@ -257,7 +257,7 @@ function getCache()
     $config = $config[0];
     if (isset($config->session_save)) {
         $value = (string) $config->session_save;
-        if ($value = 'db') {
+        if ($value == 'db') {
             $value = 'Database';
             if (isset($config->session_save_path)) {
                 $value = 'Memcached';
