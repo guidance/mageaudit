@@ -250,6 +250,40 @@ function getStores()
     return $data;
 }
 
+function getCache()
+{
+    $options = array();
+    $config = Mage::app()->getConfig()->getXpath('global');
+    $config = $config[0];
+    if (isset($config->session_save)) {
+        $value = (string) $config->session_save;
+        if ($value = 'db') {
+            $value = 'Database';
+            if (isset($config->session_save_path)) {
+                $value = 'Memcached';
+            } elseif (isset($config->redis_session)) {
+                $value = 'Redis';
+            }
+        }
+        $options['Session'] = $value;
+    }
+    if (isset($config->cache)) {
+        $value = (string) $config->cache->backend;
+        if (!$value) {
+            $value = 'File System';
+        }
+        $options['Cache'] = $value;
+    }
+    if (isset($config->full_page_cache)) {
+        $value = (string) $config->full_page_cache->backend;
+        if (!$value) {
+            $value = 'File System';
+        }
+        $options['Full Page Cache'] = $value;
+    }
+    return $options;
+}
+
 list($codePools, $dependancies) = getModules();
 
 // Get all system rewrites
@@ -268,7 +302,6 @@ foreach ($rewriteTypes as $rewriteType) {
         $moduleRewrites[$rewriteType][$module][] = $rewrite;
     }
 }
-
 
 ?>
 <html>
@@ -328,6 +361,7 @@ foreach ($rewriteTypes as $rewriteType) {
             border: 2px solid black;
             padding: 20px;
             list-style-type: none;
+            background: white;
         }
         #nav li + li {
             margin-top: 5px;
@@ -339,6 +373,7 @@ foreach ($rewriteTypes as $rewriteType) {
 <ul id="nav">
     <li><a href="#stats">Statistics</a></li>
     <li><a href="#stores">Stores</a></li>
+    <li><a href="#cache">Cache</a></li>
     <li><a href="#products">Products</a></li>
     <li><a href="#observers">Observers</a></li>
     <li><a href="#modules">Modules</a></li>
@@ -347,13 +382,17 @@ foreach ($rewriteTypes as $rewriteType) {
 <?php 
 $counts = array(
     'Products' => 'catalog/product',
-    'Content pages' => 'cms/page',
-    'Content blocks' => 'cms/block',
-    'Newsletter subscribers' => 'newsletter/subscriber',
+    'CMS Blocks' => 'cms/block',
+    'CMS Pages' => 'cms/page',
     'Customers' => 'customer/customer',
-    'Customer groups' => 'customer/group',
-    'Sales rules' => 'salesrule/rule',
-    'Sales rule coupons' => 'salesrule/coupon',
+    'Customer Groups' => 'customer/group',
+    'Customer Segments' => 'enterprise_customersegment/segment',
+    'Newsletter Subscribers' => 'newsletter/subscriber',
+    'Wishlists' => 'wishlist/wishlist',
+    'Catalog Price Rules' => 'catalogrule/rule',
+    'Shopping Cart Price Rules' => 'salesrule/rule',
+    'Shopping Cart Price Rule Coupons' => 'salesrule/coupon',
+    'Rule-Based Product Relations' => 'enterprise_targetrule/rule',
     'Quotes' => 'sales/quote',
     'Orders' => 'sales/order',
     'Invoices' => 'sales/order_invoice',
@@ -362,9 +401,15 @@ $counts = array(
 ?>
 <table class="summary">
     <?php foreach ($counts as $title => $alias): ?>
+    <?php
+        $model = Mage::getModel($alias);
+        if (!$model) {
+            continue;
+        }
+    ?>
     <tr>
         <th><?php echo $title; ?></th>
-        <td><?php echo number_format(Mage::getModel($alias)->getCollection()->getSize()); ?></td>
+        <td><?php echo number_format($model->getCollection()->getSize()); ?></td>
     </tr>
     <?php endforeach; ?>
 </table>
@@ -434,6 +479,15 @@ $counts = array(
         <?php $printedWebsite = false; ?>
     <?php endforeach; ?>
     </tbody>
+</table>
+<h2 id="cache">Cache</h2>
+<table class="summary">
+    <?php foreach (getCache() as $name => $type): ?>
+    <tr>
+        <th><?php echo $name ?></th>
+        <td><?php echo $type ?></td>
+    </tr>
+    <?php endforeach ?>
 </table>
 <h2 id="products">Products</h2>
 <table class="summary">
@@ -546,4 +600,3 @@ $counts = array(
 <?php endforeach; ?>
 </body>
 </html>
-
