@@ -36,6 +36,9 @@ function getRewrites($classType, $sorted = true)
             foreach (array('admin', 'frontend') as $type) {
                 $controllers = $config->getNode($type . '/routers')->asArray();
                 foreach ($controllers as $router => $args) {
+                    if (!isset($args['args']['modules'])) {
+                        continue;
+                    }
                     foreach ($args['args']['modules'] as $modules) {
                         if (
                             !isset($modules['@'])
@@ -64,8 +67,8 @@ function getRewrites($classType, $sorted = true)
                                 $matches,
                                 PREG_PATTERN_ORDER
                             );
-                            $class   = trim($matches[1][0]);
-                            $extends = trim($matches[2][0]);
+                            $class   = isset($matches[1][0]) ? trim($matches[1][0]) : false;
+                            $extends = isset($matches[2][0]) ? trim($matches[2][0]) : false;
                             if (strpos(
                                 $extends,
                                 $modules['@']['before']
@@ -164,6 +167,9 @@ function getModules($sorted = true)
                 $config,
                 array('name' => $package)
             );
+            if (!isset($config['depends']) || !is_array($config['depends'])) {
+                continue;
+            }
             foreach ($config['depends'] as $name => $value) {
                 if (!isset($dependancies[$name])) {
                     $dependancies[$name] = array();
@@ -571,7 +577,7 @@ $counts = array(
             </ul>
             <?php endif ?>
             <?php foreach ($moduleRewrites as $rewriteType => $rewrites): ?>
-                <?php if (count($rewrites[$moduleName])): ?>
+                <?php if (isset($rewrites[$moduleName]) && count($rewrites[$moduleName])): ?>
                     <p class="rewrite">Rewritten <?php echo ucwords($rewriteType); ?>:</p>
                     <ul>
                     <?php foreach ($rewrites[$moduleName] as $rewrite): ?>
