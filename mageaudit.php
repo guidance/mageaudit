@@ -16,17 +16,24 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 
-* @author Gordon Knoppe
-* @category Guidance
-* @package Mageaudit
+* @author    Gordon Knoppe
+* @category  Guidance
+* @package   Mageaudit
 * @copyright Copyright (c) 2013 Guidance Solutions (http://www.guidance.com)
-* @license http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
+* @license   http://www.apache.org/licenses/LICENSE-2.0 Apache License 2.0
 */
 
 // Initialize Magento
 require 'app/Mage.php';
 Mage::app('admin', 'store');
 
+/**
+ * Get module rewrites
+ * 
+ * @param  string  $classType
+ * @param  boolean $sorted
+ * @return array
+ */
 function getRewrites($classType, $sorted = true)
 {
     $config = Mage::getConfig();
@@ -106,6 +113,13 @@ function getRewrites($classType, $sorted = true)
     return $rewrites;
 }
 
+/**
+ * Get all files that appear to be controller classes
+ * 
+ * @param  string $dir
+ * @param  array  $files
+ * @return array
+ */
 function getControllerFiles($dir, $files = array())
 {
     $contents = scandir($dir);
@@ -123,6 +137,12 @@ function getControllerFiles($dir, $files = array())
     return $files;
 }
 
+/**
+ * Get methods of a class that exist in parents
+ * 
+ * @param  string $className
+ * @return array
+ */
 function getOverridenMethods($className)
 {
     if (class_exists($className)) {
@@ -151,6 +171,12 @@ function getOverridenMethods($className)
     return $overridenMethods;
 }
 
+/**
+ * Get modules based on codePool
+ * 
+ * @param  boolean $sorted
+ * @return array
+ */
 function getModules($sorted = true)
 {
     $config = Mage::getConfig();
@@ -180,17 +206,29 @@ function getModules($sorted = true)
     return array($codePools, $dependancies);
 }
 
+/**
+ * Sort modules alphabetically by name
+ * 
+ * @param  array   $a
+ * @param  array   $b
+ * @return integer
+ */
 function sortModules($a, $b)
 {
     return strcmp($a['name'], $b['name']);
 }
 
+/**
+ * Get all defined observers
+ * 
+ * @return array
+ */
 function getAllObservers()
 {
-    $config = Mage::getConfig();
-    $configNodes = array('global/events','frontend/events');
-    $observers = array();
-    foreach($configNodes as $configNode) {
+    $config      = Mage::getConfig();
+    $configNodes = array('global/events', 'frontend/events');
+    $observers   = array();
+    foreach ($configNodes as $configNode) {
         $eventConfig = $config->getNode($configNode);
         foreach ($eventConfig->children() as $eventName => $obsConfig) {
             foreach($obsConfig->observers->children() as $observerConfig) {
@@ -208,6 +246,13 @@ function getAllObservers()
     return $observers;
 }
 
+/**
+ * Get all websites, stores, and store views
+ * Mostly copied from Aoe_ManageStores
+ *
+ * @link   https://github.com/fbrnc/Aoe_ManageStores/blob/master/app/code/community/Aoe/ManageStores/Block/System/Store/Grid.php
+ * @return array
+ */
 function getStores()
 {
     $data = array();
@@ -215,9 +260,9 @@ function getStores()
         /** @var $website Mage_Core_Model_Website */
         $groupCollection = $website->getGroupCollection();
         $data[$website->getId()] = array(
-            'object' => $website,
+            'object'      => $website,
             'storeGroups' => array(),
-            'count' => 0
+            'count'       => 0
         );
         $defaultGroupId = $website->getDefaultGroupId();
         foreach ($groupCollection as $storeGroup) {
@@ -227,7 +272,7 @@ function getStores()
             $data[$website->getId()]['storeGroups'][$storeGroup->getId()] = array(
                 'object' => $storeGroup,
                 'stores' => array(),
-                'count' => $storeGroupCount
+                'count'  => $storeGroupCount
             );
             $data[$website->getId()]['count'] += $storeGroupCount;
             if ($storeGroup->getId() == $defaultGroupId) {
@@ -250,11 +295,16 @@ function getStores()
     return $data;
 }
 
+/**
+ * Get cache options
+ * 
+ * @return array
+ */
 function getCache()
 {
     $options = array();
-    $config = Mage::app()->getConfig()->getXpath('global');
-    $config = $config[0];
+    $config  = Mage::app()->getConfig()->getXpath('global');
+    $config  = $config[0];
     if (isset($config->session_save)) {
         $value = (string) $config->session_save;
         if ($value == 'db') {
@@ -287,7 +337,7 @@ function getCache()
 list($codePools, $dependancies) = getModules();
 
 // Get all system rewrites
-$rewriteTypes = array('blocks', 'controllers', 'helpers', 'models');
+$rewriteTypes   = array('blocks', 'controllers', 'helpers', 'models');
 $systemRewrites = array();
 foreach ($rewriteTypes as $rewriteType) {
     $systemRewrites[$rewriteType] = getRewrites($rewriteType);
@@ -381,22 +431,22 @@ foreach ($rewriteTypes as $rewriteType) {
 <h2 id="stats">Statistics</h2>
 <?php 
 $counts = array(
-    'Products' => 'catalog/product',
-    'CMS Blocks' => 'cms/block',
-    'CMS Pages' => 'cms/page',
-    'Customers' => 'customer/customer',
-    'Customer Groups' => 'customer/group',
-    'Customer Segments' => 'enterprise_customersegment/segment',
-    'Newsletter Subscribers' => 'newsletter/subscriber',
-    'Wishlists' => 'wishlist/wishlist',
-    'Catalog Price Rules' => 'catalogrule/rule',
-    'Shopping Cart Price Rules' => 'salesrule/rule',
+    'Products'                         => 'catalog/product',
+    'CMS Blocks'                       => 'cms/block',
+    'CMS Pages'                        => 'cms/page',
+    'Customers'                        => 'customer/customer',
+    'Customer Groups'                  => 'customer/group',
+    'Customer Segments'                => 'enterprise_customersegment/segment',
+    'Newsletter Subscribers'           => 'newsletter/subscriber',
+    'Wishlists'                        => 'wishlist/wishlist',
+    'Catalog Price Rules'              => 'catalogrule/rule',
+    'Shopping Cart Price Rules'        => 'salesrule/rule',
     'Shopping Cart Price Rule Coupons' => 'salesrule/coupon',
-    'Rule-Based Product Relations' => 'enterprise_targetrule/rule',
-    'Quotes' => 'sales/quote',
-    'Orders' => 'sales/order',
-    'Invoices' => 'sales/order_invoice',
-    'Shipments' => 'sales/order_shipment',
+    'Rule-Based Product Relations'     => 'enterprise_targetrule/rule',
+    'Quotes'                           => 'sales/quote',
+    'Orders'                           => 'sales/order',
+    'Invoices'                         => 'sales/order_invoice',
+    'Shipments'                        => 'sales/order_shipment',
 );
 ?>
 <table class="summary">
@@ -499,7 +549,7 @@ $counts = array(
     <?php endforeach; ?>
 </table>
 <?php $listobservers = getAllObservers() ?>
-<?php if(count($listobservers)): ?>
+<?php if (count($listobservers)): ?>
 <h2 id="observers">Observers</h2>
 <table class="summary">
     <?php foreach ($listobservers as $name => $methods): ?>
